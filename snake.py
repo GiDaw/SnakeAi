@@ -197,6 +197,8 @@ qTable=[]
 
 #calc reward
 def calc_reward(state, action):
+    
+    history[-1]
     if(state[0] == 1 and state[9] == 0 and state[8] == 0 and state[7] == 0 and action=="LEFT"):
         return 1
 
