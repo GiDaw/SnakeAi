@@ -2,7 +2,7 @@
 import pygame
 import time
 import random
-
+import math
 import numpy as np
 
 # colors
@@ -18,7 +18,7 @@ window_x = 720
 window_y = 480
 
 
-snake_speed = 15
+snake_speed = 1000
 snake_position = [100, 50]
 snake_body = [[100, 50],
               [90, 50],
@@ -36,7 +36,7 @@ score = 0
 
 walls = pygame.Rect(10, 10, 710, 470)
 
-active_agent = False
+active_agent = True
 history = []
 
 # pygame initialization
@@ -46,7 +46,7 @@ game_window = pygame.display.set_mode((window_x, window_y))
 fps = pygame.time.Clock()
 
 moves = ['Straight','Right','Left']
-headDir = ['UP', "DOWN", 'LEFT', 'RIGHT']
+headDir = ['UP', 'LEFT', 'DOWN', 'RIGHT']
 # function for reseting game
 def reset_game():  
 
@@ -93,8 +93,12 @@ def draw_gui(color, font, size):
 
 # game over function
 def game_over():
-  
-
+    global iteretion
+    global done
+    global qTable
+    iteretion +=1
+    done = True
+    print(qTable)
     my_font = pygame.font.SysFont('times new roman', 50)
     
     game_over_surface = my_font.render('Your Score is : ' + str(score), True, red)
@@ -109,22 +113,29 @@ def game_over():
     game_window.blit(info_text , info_text_rect)
     pygame.display.flip()
 
-    # User input 
-    loop = True
-    while loop:
-        for event in pygame.event.get():
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_n:
-                    reset_game()
-                    loop = False
-                if event.key == pygame.K_ESCAPE:
-                    pygame.quit()
-                    quit()
+
+    #User input 
+    reset_game()
+    # loop = True
+    # while loop:
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.KEYDOWN:
+    #             if event.key == pygame.K_n:
+    #                 reset_game()
+    #                 loop = False
+    #             if event.key == pygame.K_ESCAPE:
+    #                 pygame.quit()
+    #                 quit()
 
 #check for fruit relative to snake
 def check_fruit():
+
+
+
     horizontal=snake_position[0]-fruit_position[0]
     vertical=snake_position[1]-fruit_position[1]
+
+
 
     fruit_up=False
     fruit_down=False
@@ -141,14 +152,7 @@ def check_fruit():
     if(vertical < 0):
         fruit_down = True
     
-    if(horizontal == 0 and vertical > 0):
-        fruit_up = True
-    if(horizontal == 0 and vertical < 0):
-        fruit_down = True
-    if(vertical == 0 and horizontal > 0):
-        fruit_left = True
-    if(vertical == 0 and horizontal < 0):
-        fruit_right = True
+
 
     return fruit_up,fruit_down,fruit_right,fruit_left
 
@@ -194,20 +198,56 @@ wall_left = False
 wall_right = False
 qValue=0
 qTable=[]
+eaten = False
+done = False
 
 #calc reward
 def calc_reward(state, action):
-    
-    history[-1]
-    if(state[0] == 1 and state[9] == 0 and state[8] == 0 and state[7] == 0 and action=="LEFT"):
+    global Pythagorean,previousFruitDistance
+    global eaten
+    global done
+
+
+
+    if(done == True):
+        done = False
+        return -10
+
+    if(previousFruitDistance>Pythagorean):
         return 1
 
 
+    
     return -1
 
+iteretion = 0
+previousHor=0
+previousVer=0
+a = (fruit_position[0]-snake_position[0])/10
+b = (fruit_position[1]-snake_position[1])/10
+# Pythagorean=math.sqrt(a ** 2 + b ** 2)
+Pythagorean = pygame.math.Vector2(snake_position[0], snake_position[1]).distance_to((fruit_position[0], fruit_position[1]))
+previousFruitDistance = Pythagorean
+outputs= ""
+agent_action=""
+snakeUp=False
+snakeDown=False
+snakeLeft=False
+snakeRight=False
+
+fruit_up = False
+fruit_down = False
+fruit_right = False
+fruit_left = False
+inputs =[snakeUp,snakeDown,snakeRight,snakeLeft,
+            wall_front,wall_left,wall_right,
+            fruit_up,fruit_down,fruit_right,fruit_left
+            ]
 # Main Function
 while True:
-    dir_info=[0,0,0,0]
+
+    #print("previous :",previousFruitDistance," now :",Pythagorean)
+    
 
     # User input 
     if (active_agent == False):
@@ -224,17 +264,80 @@ while True:
                 if event.key == pygame.K_ESCAPE:
                     pygame.quit()
                     quit()
+    snakeUp=False
+    snakeDown=False
+    snakeLeft=False
+    snakeRight=False
+    if(direction == 'UP'):
+        snakeUp=True
 
+        wall_front = check_up()
+        wall_left = check_left()
+        wall_right = check_right()
+
+    if(direction == 'DOWN'):
+        snakeDown=True
+
+        wall_front = check_down()
+        wall_left = check_right()
+        wall_right = check_left()
+
+    if(direction == 'RIGHT'):
+        snakeRight=True
+
+        wall_front = check_right()
+        wall_left = check_down()
+        wall_right = check_up()
+
+    if(direction == 'LEFT'):
+        snakeLeft=True
+        
+        wall_front = check_left()
+        wall_left = check_up()
+        wall_right = check_down()
+
+    fruit_up,fruit_down,fruit_right,fruit_left = check_fruit()
+
+    
+
+    previousFruitDistance = Pythagorean
+    
     # Agent manipulation
     if (active_agent == True):
-
-        agent_action = moves[random.randrange(3)]
+        pygame.event.get()
+        highestvalue = -10
         choice = ""
 
+
+        gamma = 10
+        randomOrNot = random.randint(1, 100)
+        agent_action = ""
+        
+        decisions=[]
+        i = 0
+        if(randomOrNot>gamma):
+            for q in qTable:
+                if(np.all(q[1] == inputs) == True):
+                    decisions.append(qTable[i])
+                    if(highestvalue<q[0]):
+                        highestvalue = q[0]
+                        agent_action = q[2]
+            if (agent_action == ""):
+                agent_action = moves[random.randrange(3)] 
+            i+=1
+
+        else:
+            agent_action = moves[random.randrange(3)] 
+
+        if(iteretion<20):
+            agent_action = moves[random.randrange(3)]
+
+        
         temp = np.array(headDir)
 
         if (agent_action == "Straight"):
             choice = change_to
+
         if (agent_action=="Left"):
             i = list(temp).index(direction)
             if (i!= 3):
@@ -242,6 +345,7 @@ while True:
                 choice = headDir[i]
             else:
                 choice = headDir[0]
+
         if (agent_action=="Right"):
             i = list(temp).index(direction)
             if (i!= 0):
@@ -251,26 +355,8 @@ while True:
                 choice = headDir[3]
  
         change_to = choice
-
-      
-        
-
-        inputs = [dir_info[0],dir_info[1],dir_info[2],dir_info[3],wall_front,wall_left,wall_right,fruit_up,fruit_down,fruit_right,fruit_left]
-
-        outputs = agent_action
-
-        history.append([inputs,outputs])
-
         
         
-    outputs = change_to
-
-    print(qValue)
-    inputs = [dir_info[0],dir_info[1],dir_info[2],dir_info[3],wall_front,wall_left,wall_right,fruit_up,fruit_down,fruit_right,fruit_left]
-    
-    reward = calc_reward(inputs,outputs)
-    qValue = qValue + reward
-    qTable = [reward,inputs,outputs]
 
 
     # 2 keys at the same time
@@ -283,7 +369,6 @@ while True:
     if change_to == 'RIGHT' and direction != 'LEFT':
         direction = 'RIGHT'
 
-
     # Moving the snake
     if direction == 'UP':
         snake_position[1] -= 10
@@ -295,44 +380,11 @@ while True:
         snake_position[0] += 10
 
 
-
-
-
-    # getting information for training
-    if(direction == 'UP'):
-        dir_info=[1,0,0,0]
-
-        wall_front = check_up()
-        wall_left = check_left()
-        wall_right = check_right()
-
-    if(direction == 'DOWN'):
-        dir_info=[0,1,0,0]
-
-        wall_front = check_down()
-        wall_left = check_right()
-        wall_right = check_left()
-
-    if(direction == 'RIGHT'):
-        dir_info=[0,0,1,0]
-
-        wall_front = check_right()
-        wall_left = check_down()
-        wall_right = check_up()
-
-    if(direction == 'LEFT'):
-        dir_info=[0,0,0,1]  
-        
-        wall_front = check_left()
-        wall_left = check_up()
-        wall_right = check_down()
-
-    fruit_up,fruit_down,fruit_right,fruit_left = check_fruit()
-
     # Snake body growing
     snake_body.insert(0, list(snake_position))
     if snake_position[0] == fruit_position[0] and snake_position[1] == fruit_position[1]:
         score += 1
+        eaten = True
         fruit_spawn = False
     else:
         snake_body.pop()
@@ -365,23 +417,15 @@ while True:
             pygame.draw.rect(game_window, green, pygame.Rect(pos[0]+1, pos[1]+1, 8, 8))
 
 
-
-    # Game Over conditions
-    # Wall
-    if snake_position[0] < 20 or snake_position[0] > window_x-30:
-        game_over()
-    if snake_position[1] < 20 or snake_position[1] > window_y-30:
-        game_over()
-
-    # wall and fruits detecion visualization
+    #wall and fruits detecion visualization
     # if wall_front == True:
     #     print("front")
 
     # if wall_left == True:
     #     print("left")
-
     # if wall_right == True:
     #     print("right")
+
     # if fruit_up == True:
     #     print("up")
     # if fruit_down == True:
@@ -391,11 +435,53 @@ while True:
     # if fruit_right == True:
     #     print("right")
    
+    # print(previousFruitDistance>Pythagorean)
+
+    # Game Over conditions
+    # Wall
+    if snake_position[0] < 20 or snake_position[0] > window_x-30:
+        game_over()
+    if snake_position[1] < 20 or snake_position[1] > window_y-30:
+        game_over()
+        
+
+
     # Snake body
     for block in snake_body[1:]:
         if snake_position[0] == block[0] and snake_position[1] == block[1]:
             game_over()
 
+    a = (fruit_position[0]-snake_position[0])/10
+    b = (fruit_position[1]-snake_position[1])/10
+    # Pythagorean = math.sqrt(a ** 2 + b ** 2)
+    Pythagorean = pygame.math.Vector2(snake_position[0], snake_position[1]).distance_to((fruit_position[0], fruit_position[1]))
+    distancing = pygame.math.Vector2(snake_position[0], snake_position[0]).distance_to((fruit_position[0], fruit_position[1]))
+    distancing = pygame.math.Vector2(snake_position[0], snake_position[0]).distance_to((fruit_position[0], fruit_position[1]))
+    reward = calc_reward(inputs,agent_action)
+
+
+    inputs = [snakeUp,snakeDown,snakeRight,snakeLeft,
+            wall_front,wall_left,wall_right,
+            fruit_up,fruit_down,fruit_right,fruit_left
+            ]
+    outputs = agent_action
+
+    history.append([inputs,outputs])
+
+    
+    i = 0
+    new = True
+    for q in qTable:
+        #update a existing value in qtable
+        if (np.all(q[1] == inputs) == True and q[2] == outputs):
+            
+            qTable[i][0] = max(q[0],reward)
+            new = False
+            break
+        i+=1
+    #add a new value do qtable
+    if (new == True):
+        qTable.append([reward,inputs,outputs])
     draw_gui( white, 'times new roman', 20)
     pygame.display.update()
 
