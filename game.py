@@ -85,21 +85,21 @@ class Game:
     def Game_over(self):
         self.death = True
 
-        my_font = pygame.font.SysFont('times new roman', 50)
+        # my_font = pygame.font.SysFont('times new roman', 50)
         
-        Game_over_surface = my_font.render('Your Score is : ' + str(self.score), True, self.red)
-        Game_over_rect = Game_over_surface.get_rect()
-        Game_over_rect.midtop = (self.window_x/2, self.window_y/4)
+        # Game_over_surface = my_font.render('Your Score is : ' + str(self.score), True, self.red)
+        # Game_over_rect = Game_over_surface.get_rect()
+        # Game_over_rect.midtop = (self.window_x/2, self.window_y/4)
 
-        info_text = my_font.render('press n to reset Game, esc to exit', True, self.white)
-        info_text_rect = info_text.get_rect()
-        info_text_rect.midtop = (self.window_x/2, self.window_y/4+50)
+        # info_text = my_font.render('press n to reset Game, esc to exit', True, self.white)
+        # info_text_rect = info_text.get_rect()
+        # info_text_rect.midtop = (self.window_x/2, self.window_y/4+50)
         
-        self.gameWindow.blit(Game_over_surface, Game_over_rect)
-        self.gameWindow.blit(info_text , info_text_rect)
-        pygame.display.flip()
+        # self.gameWindow.blit(Game_over_surface, Game_over_rect)
+        # self.gameWindow.blit(info_text , info_text_rect)
+        # pygame.display.flip()
 
-        self.reset_Game()
+
 
     # Moving the snake
     def snake_move(self):
@@ -254,14 +254,14 @@ class Game:
         if(self.direction == 'RIGHT'):
 
             wallFront = self.check_right()
-            wallLeft = self.check_down()
-            wallRight = self.check_up()
+            wallLeft = self.check_up()
+            wallRight = self.check_down()
 
         if(self.direction == 'LEFT'):
             
             wallFront = self.check_left()
-            wallLeft = self.check_up()
-            wallRight = self.check_down()
+            wallLeft = self.check_down()
+            wallRight = self.check_up()
         
         return wallFront,wallLeft,wallRight
     
@@ -279,14 +279,18 @@ class Game:
             snakeDown=True
 
         if(self.direction == 'RIGHT'):
-            snakeLeft=True
+            snakeRight=True
 
         if(self.direction == 'LEFT'):
-            snakeRight=True
+            snakeLeft=True
 
         return snakeUp,snakeDown,snakeLeft,snakeRight
     
     def playStep(self,action = ""):
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                quit()
         #User input
         if (action == ""):
             for event in pygame.event.get():
